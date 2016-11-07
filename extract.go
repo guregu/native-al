@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+
+	"github.com/kardianos/osext"
 )
 
 var libraryPath string
@@ -18,8 +20,21 @@ func init() {
 	// Initialize blob data slice.
 	initBlob()
 
+	var usr *user.User
+	var err error
+
+	// First, try same directory as the binary.
+	if sameDir, err := osext.ExecutableFolder(); err == nil {
+		lib := filepath.Join(sameDir, blobFileName)
+		if _, err := os.Stat(lib); err == nil {
+			libraryPath = lib
+			log.Println("Using same-dir OpenAL:", lib)
+			goto load // Sorry
+		}
+	}
+
 	// Determine where the library should actually be placed on the system
-	usr, err := user.Current()
+	usr, err = user.Current()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,6 +59,7 @@ func init() {
 		}
 	}
 
+load:
 	// Load the library
 	err = loadLibrary(libraryPath)
 	if err != nil {
